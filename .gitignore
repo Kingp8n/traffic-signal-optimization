@@ -9,3 +9,16 @@ data/evaluation_logs/**/*.csv
 models/optimized/checkpoints/
 
 .venv/
+.venv-web/
+
+# Local Traffic Studio state and generated web artifacts
+workspace/
+web/frontend/node_modules/
+web/frontend/.vite/
+web/frontend/dist/
+web/frontend/coverage/
+web/frontend/*.tsbuildinfo
+.pytest_cache/
+.ruff_cache/
+*.tfevents.*
+modelsops/PPO_1/
