@@ -64,13 +64,15 @@ def custom_ambulance_reward(traffic_signal):
 
 def train_robust():
     log_dir = "./models_robust/"
+    csv_dir = os.path.join("data", "training_logs", "robust")
     os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(csv_dir, exist_ok=True)
     
     # 1. Create Environment WITHOUT a fixed seed
     env = sumo_rl.SumoEnvironment(
         net_file="draft02.net.xml",
         route_file="vtypes.rou.xml,traffic_dense.rou.xml,ambulance_s.rou.xml",
-        out_csv_name="robust_train",
+        out_csv_name=os.path.join(csv_dir, "robust_train"),
         use_gui=False,
         num_seconds=1000,
         yellow_time=4,

@@ -6,12 +6,14 @@ import os
 
 def test_model():
     print("🚀 Loading Trained Model...")
+    csv_dir = os.path.join("data", "evaluation_logs", "basic")
+    os.makedirs(csv_dir, exist_ok=True)
     
     # 1. Setup Environment
     env = sumo_rl.SumoEnvironment(
         net_file="draft02.net.xml",
         route_file="vtypes.rou.xml,draft02.rou.xml,ambulance.rou.xml",
-        out_csv_name="test_results",
+        out_csv_name=os.path.join(csv_dir, "test_results"),
         use_gui=True,              
         num_seconds=600,
         fixed_ts=False,            
@@ -22,14 +24,14 @@ def test_model():
     )
 
     # 2. Load Agent
-    model_path = "my_traffic_agent"
-    if not os.path.exists(model_path + ".zip"):
-        print(f"⚠️ '{model_path}.zip' not found. Checking models folder...")
+    model_path = os.path.join("models", "rl", "my_traffic_agent.zip")
+    if not os.path.exists(model_path):
+        print(f"⚠️ '{model_path}' not found. Checking models folder...")
         if os.path.exists("models"):
             files = [f for f in os.listdir("models") if f.endswith(".zip")]
             if files:
                 latest = max(files, key=lambda x: int(x.split('_')[2])) 
-                model_path = os.path.join("models", latest.replace(".zip", ""))
+                model_path = os.path.join("models", latest)
                 print(f"🔄 Found checkpoint: {model_path}")
             else:
                 print("❌ No models found! Did training finish?")
