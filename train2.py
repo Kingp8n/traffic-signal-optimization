@@ -99,7 +99,8 @@ def train():
     print("Starting training... (This might take a while)")
     model.learn(total_timesteps=10000, callback=checkpoint_callback)
 
-    model.save("my_traffic_agent")
+    os.makedirs(os.path.join("models", "rl"), exist_ok=True)
+    model.save(os.path.join("models", "rl", "my_traffic_agent"))
     print("Model saved successfully.")
     
     # Run evaluation

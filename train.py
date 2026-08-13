@@ -82,12 +82,14 @@ def evaluate_ambulance_performance(env, model):
 def train():
     net_file = "draft02.net.xml"
     route_file = "vtypes.rou.xml,draft02.rou.xml,ambulance.rou.xml"
+    csv_dir = os.path.join("data", "training_logs", "basic")
+    os.makedirs(csv_dir, exist_ok=True)
 
     env = sumo_rl.SumoEnvironment(
         net_file=net_file,
         route_file=route_file,
         fixed_ts=False,  # We want AI control now
-        out_csv_name="traffic_result",
+        out_csv_name=os.path.join(csv_dir, "traffic_result"),
         use_gui=False,   # Keep False for fast training
         num_seconds=600,
         yellow_time=4,
@@ -109,7 +111,8 @@ def train():
     print("Starting training... (This might take a while)")
     model.learn(total_timesteps=100000)
 
-    model.save("my_traffic_agent")
+    os.makedirs(os.path.join("models", "rl"), exist_ok=True)
+    model.save(os.path.join("models", "rl", "my_traffic_agent"))
     print("Model saved successfully.")
     
     # Run evaluation (make sure to close env first to be safe, or just run it)

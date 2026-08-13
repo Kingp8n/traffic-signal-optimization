@@ -32,6 +32,9 @@ rl-traffic-control/
 ├── train2.py                    # Basic training script
 ├── test2.py                     # Basic testing script
 ├── run_baseline_pure_traci.py  # Baseline fixed-time signals comparison
+├── data/training_logs/         # Generated per-episode SUMO CSV metrics
+│   ├── robust/                 # Robust/optimized training logs
+│   └── scenario_s/             # S-scenario training logs
 ├── draft02.net.xml              # SUMO road network
 ├── draft02.rou.xml              # Civilian vehicle routes
 ├── ambulance.rou.xml            # Emergency vehicle configuration
@@ -45,7 +48,7 @@ rl-traffic-control/
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
 # Set SUMO_HOME environment variable
 export SUMO_HOME="/usr/share/sumo"  # Adjust path as needed
@@ -55,16 +58,15 @@ export SUMO_HOME="/usr/share/sumo"  # Adjust path as needed
 
 **1. Train the Optimized RL Agent**
 ```bash
-python train_optimized.py
+python3 train_optimized.py
 ```
-- Training runs for 100,000 timesteps
-- Checkpoints saved every 10,000 steps to `./models/`
-- Final model: `optimized_traffic_agent.zip`
-- Normalization stats: `vec_normalize.pkl`
+- Training runs for 200,000 timesteps
+- Final model: `robust_traffic_agent.zip`
+- Normalization stats: `robust_vec_normalise.pkl`
 
 **2. Run Baseline Comparison**
 ```bash
-python run_baseline_pure_traci.py
+python3 run_baseline_pure_traci.py
 ```
 - Simulates fixed-time traffic signals
 - Records ambulance travel time for comparison
@@ -72,11 +74,18 @@ python run_baseline_pure_traci.py
 
 **3. Test the Trained Agent**
 ```bash
-python test_optimized.py
+python3 test_optimized.py
 ```
 - Loads trained model and normalization stats
 - Visualizes agent performance with SUMO GUI
 - Tracks and reports ambulance travel time
+
+**4. Plot the Training Metrics**
+```bash
+python3 plot_res.py
+```
+- Reads episode metrics from `data/training_logs/robust/`
+- Future training runs write CSV files there instead of the repository root
 
 ## 🧠 Key Features
 

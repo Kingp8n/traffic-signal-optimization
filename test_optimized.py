@@ -6,6 +6,7 @@ import sumo_rl
 import traci
 import os
 import time
+import zlib
 
 class AmbulanceObservationWrapper(gym.ObservationWrapper):
     """
@@ -27,7 +28,7 @@ class AmbulanceObservationWrapper(gym.ObservationWrapper):
             veh_list = traci.vehicle.getIDList()
             if "hero_ambulance" in veh_list:
                 lane_id = traci.vehicle.getLaneID("hero_ambulance")
-                lane_idx = abs(hash(lane_id)) % self.add_dim
+                lane_idx = zlib.crc32(lane_id.encode("utf-8")) % self.add_dim
                 ambulance_pos[lane_idx] = 1.0
         except:
             pass

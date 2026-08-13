@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+
+# Generated SUMO episode metrics (directories remain documented in data/README.md)
+data/training_logs/**/*.csv
+data/evaluation_logs/**/*.csv
+
+.venv/

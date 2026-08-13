@@ -3,15 +3,19 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def plot_traffic_metrics(prefix="robust_train"):
+def plot_traffic_metrics(prefix="robust_train", data_dir="data/training_logs/robust"):
     print(f"📊 Scanning for episode CSV files starting with '{prefix}'...")
+
+    if not os.path.isdir(data_dir):
+        print(f"❌ Training data directory not found: '{data_dir}'.")
+        return
     
     # 1. Locate and sort files chronologically
-    csv_files = [f for f in os.listdir(".") if f.startswith(prefix) and f.endswith(".csv")]
+    csv_files = [f for f in os.listdir(data_dir) if f.startswith(prefix) and f.endswith(".csv")]
     
     if not csv_files:
         print(f"❌ No files found starting with '{prefix}'.")
-        print("Make sure your training script has completed at least one episode and generated the CSVs.")
+        print(f"Make sure training has generated episode CSVs in '{data_dir}'.")
         return
 
     # Extract episode number
@@ -31,7 +35,7 @@ def plot_traffic_metrics(prefix="robust_train"):
             ep_num = extract_ep_num(file)
             if ep_num == -1: continue
                 
-            df = pd.read_csv(file)
+            df = pd.read_csv(os.path.join(data_dir, file))
             df = df[df["step"] > 0] # Filter initial state
             
             if len(df) > 0:

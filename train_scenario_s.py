@@ -37,9 +37,11 @@ def custom_ambulance_reward_s(traffic_signal):
 def train_scenario_s():
     net_file = "draft02.net.xml"
     route_file = "vtypes.rou.xml,traffic_dense.rou.xml,ambulance_s.rou.xml"
+    csv_dir = os.path.join("data", "training_logs", "scenario_s")
     
     # Create models directory for S-scenario
     os.makedirs("models_s", exist_ok=True)
+    os.makedirs(csv_dir, exist_ok=True)
     
     # Define the Checkpoint: Save every 10,000 steps
     checkpoint_callback = CheckpointCallback(
@@ -53,7 +55,7 @@ def train_scenario_s():
         net_file=net_file,
         route_file=route_file,
         fixed_ts=False,
-        out_csv_name="traffic_result_s",
+        out_csv_name=os.path.join(csv_dir, "traffic_result_s"),
         use_gui=False,
         num_seconds=1000,  # Longer episodes for complex scenario
         yellow_time=4,
