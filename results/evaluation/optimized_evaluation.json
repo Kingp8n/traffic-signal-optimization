@@ -1,0 +1,182 @@
+[
+  {
+    "episode": 1,
+    "seed": 0,
+    "success": true,
+    "ambulance_duration_seconds": 25.0,
+    "civilian_average_wait_seconds": 4.5,
+    "priority_overrides": 3,
+    "simulation_finish_time": 35.0
+  },
+  {
+    "episode": 2,
+    "seed": 1,
+    "success": true,
+    "ambulance_duration_seconds": 5.0,
+    "civilian_average_wait_seconds": 0.2857142857142857,
+    "priority_overrides": 1,
+    "simulation_finish_time": 15.0
+  },
+  {
+    "episode": 3,
+    "seed": 2,
+    "success": true,
+    "ambulance_duration_seconds": 15.0,
+    "civilian_average_wait_seconds": 2.0,
+    "priority_overrides": 2,
+    "simulation_finish_time": 25.0
+  },
+  {
+    "episode": 4,
+    "seed": 3,
+    "success": true,
+    "ambulance_duration_seconds": 15.0,
+    "civilian_average_wait_seconds": 2.064516129032258,
+    "priority_overrides": 2,
+    "simulation_finish_time": 25.0
+  },
+  {
+    "episode": 5,
+    "seed": 4,
+    "success": true,
+    "ambulance_duration_seconds": 15.0,
+    "civilian_average_wait_seconds": 3.1818181818181817,
+    "priority_overrides": 0,
+    "simulation_finish_time": 25.0
+  },
+  {
+    "episode": 6,
+    "seed": 5,
+    "success": true,
+    "ambulance_duration_seconds": 25.0,
+    "civilian_average_wait_seconds": 8.452380952380953,
+    "priority_overrides": 0,
+    "simulation_finish_time": 35.0
+  },
+  {
+    "episode": 7,
+    "seed": 6,
+    "success": true,
+    "ambulance_duration_seconds": 5.0,
+    "civilian_average_wait_seconds": 0.5,
+    "priority_overrides": 1,
+    "simulation_finish_time": 15.0
+  },
+  {
+    "episode": 8,
+    "seed": 7,
+    "success": true,
+    "ambulance_duration_seconds": 20.0,
+    "civilian_average_wait_seconds": 3.638888888888889,
+    "priority_overrides": 2,
+    "simulation_finish_time": 30.0
+  },
+  {
+    "episode": 9,
+    "seed": 8,
+    "success": true,
+    "ambulance_duration_seconds": 10.0,
+    "civilian_average_wait_seconds": 1.3043478260869565,
+    "priority_overrides": 1,
+    "simulation_finish_time": 20.0
+  },
+  {
+    "episode": 10,
+    "seed": 9,
+    "success": true,
+    "ambulance_duration_seconds": 10.0,
+    "civilian_average_wait_seconds": 1.8571428571428572,
+    "priority_overrides": 1,
+    "simulation_finish_time": 20.0
+  },
+  {
+    "episode": 11,
+    "seed": 10,
+    "success": true,
+    "ambulance_duration_seconds": 15.0,
+    "civilian_average_wait_seconds": 3.1621621621621623,
+    "priority_overrides": 2,
+    "simulation_finish_time": 25.0
+  },
+  {
+    "episode": 12,
+    "seed": 11,
+    "success": true,
+    "ambulance_duration_seconds": 15.0,
+    "civilian_average_wait_seconds": 2.5789473684210527,
+    "priority_overrides": 2,
+    "simulation_finish_time": 25.0
+  },
+  {
+    "episode": 13,
+    "seed": 12,
+    "success": true,
+    "ambulance_duration_seconds": 15.0,
+    "civilian_average_wait_seconds": 3.4054054054054053,
+    "priority_overrides": 0,
+    "simulation_finish_time": 25.0
+  },
+  {
+    "episode": 14,
+    "seed": 13,
+    "success": true,
+    "ambulance_duration_seconds": 30.0,
+    "civilian_average_wait_seconds": 5.833333333333333,
+    "priority_overrides": 2,
+    "simulation_finish_time": 40.0
+  },
+  {
+    "episode": 15,
+    "seed": 14,
+    "success": true,
+    "ambulance_duration_seconds": 25.0,
+    "civilian_average_wait_seconds": 6.133333333333334,
+    "priority_overrides": 2,
+    "simulation_finish_time": 35.0
+  },
+  {
+    "episode": 16,
+    "seed": 15,
+    "success": true,
+    "ambulance_duration_seconds": 15.0,
+    "civilian_average_wait_seconds": 2.024390243902439,
+    "priority_overrides": 3,
+    "simulation_finish_time": 25.0
+  },
+  {
+    "episode": 17,
+    "seed": 16,
+    "success": true,
+    "ambulance_duration_seconds": 5.0,
+    "civilian_average_wait_seconds": 0.7368421052631579,
+    "priority_overrides": 1,
+    "simulation_finish_time": 15.0
+  },
+  {
+    "episode": 18,
+    "seed": 17,
+    "success": true,
+    "ambulance_duration_seconds": 5.0,
+    "civilian_average_wait_seconds": 4.973684210526316,
+    "priority_overrides": 1,
+    "simulation_finish_time": 30.0
+  },
+  {
+    "episode": 19,
+    "seed": 18,
+    "success": true,
+    "ambulance_duration_seconds": 15.0,
+    "civilian_average_wait_seconds": 2.757575757575758,
+    "priority_overrides": 3,
+    "simulation_finish_time": 25.0
+  },
+  {
+    "episode": 20,
+    "seed": 19,
+    "success": true,
+    "ambulance_duration_seconds": 15.0,
+    "civilian_average_wait_seconds": 2.5384615384615383,
+    "priority_overrides": 2,
+    "simulation_finish_time": 25.0
+  }
+]

@@ -1,186 +1,122 @@
-import gymnasium as gym
-import numpy as np
+"""Evaluate the joint emergency-priority PPO controller."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import time
+from pathlib import Path
+
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
-import sumo_rl
-import traci
-import os
-import time
-import zlib
 
-class AmbulanceObservationWrapper(gym.ObservationWrapper):
-    """
-    🚨 REQUIRED FOR ROBUST TESTING 🚨
-    This must exactly match the wrapper used during training so the AI 
-    receives the exact same number of inputs (Traffic Data + 20 Lane Trackers).
-    """
-    def __init__(self, env):
-        super().__init__(env)
-        orig_shape = self.observation_space.shape[0]
-        self.add_dim = 20 
-        self.observation_space = gym.spaces.Box(
-            low=-np.inf, high=np.inf, shape=(orig_shape + self.add_dim,), dtype=np.float32
+from traffic_control_env import JointEmergencyTrafficEnv
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+MODEL_DIR = PROJECT_ROOT / "models" / "optimized"
+RESULT_DIR = PROJECT_ROOT / "results" / "evaluation"
+
+
+def evaluate(
+    *,
+    episodes: int = 1,
+    seed: int = 0,
+    use_gui: bool = True,
+    delay: float = 0.03,
+) -> list[dict]:
+    model_path = MODEL_DIR / "joint_traffic_agent.zip"
+    normalize_path = MODEL_DIR / "vec_normalize.pkl"
+    if not model_path.exists() or not normalize_path.exists():
+        raise FileNotFoundError(
+            "Joint model is missing. Run `python3 train_optimized.py` first."
         )
 
-    def observation(self, obs):
-        ambulance_pos = np.zeros(self.add_dim, dtype=np.float32)
-        try:
-            veh_list = traci.vehicle.getIDList()
-            if "hero_ambulance" in veh_list:
-                lane_id = traci.vehicle.getLaneID("hero_ambulance")
-                lane_idx = zlib.crc32(lane_id.encode("utf-8")) % self.add_dim
-                ambulance_pos[lane_idx] = 1.0
-        except:
-            pass
-        return np.concatenate([obs, ambulance_pos])
-
-
-def test_optimized():
-    print("🚀 Loading Robust Universal Trained Model...")
-    
-    # 1. Setup Same Environment (NO SEED LOCKED THIS TIME! 🎲)
-    env = sumo_rl.SumoEnvironment(
-        net_file="draft02.net.xml",
-        route_file="vtypes.rou.xml,traffic_dense.rou.xml,ambulance_s.rou.xml",
-        out_csv_name=None,
-        use_gui=True,
+    raw_env = JointEmergencyTrafficEnv(
+        use_gui=use_gui,
         num_seconds=1000,
-        fixed_ts=False,
-        yellow_time=4,
-        min_green=5,
-        max_green=60,
-        single_agent=True
-        # NO SEED: Let the traffic be completely random!
+        sumo_seed=seed,
+        terminate_on_ambulance=True,
     )
-    
-    # 2. Apply the Robust Wrapper First!
-    env = AmbulanceObservationWrapper(env)
-    
-    # 3. Re-Apply Normalization Wrapper
-    env = DummyVecEnv([lambda: env])
-    
-    # Check if normalization file exists
-    if not os.path.exists("robust_vec_normalise.pkl"):
-        print("⚠️ 'robust_vec_normalise.pkl' not found. Checking models folder...")
-        if os.path.exists("models_robust"):
-            norm_files = [f for f in os.listdir("models_robust") if f.endswith(".pkl")]
-            if norm_files:
-                norm_path = os.path.join("models_robust", norm_files[-1])
-                print(f"🔄 Found normalization file: {norm_path}")
-                env = VecNormalize.load(norm_path, env)
-            else:
-                print("❌ No normalization file found! Model will likely fail.")
-                return
-        else:
-            print("❌ No normalization file found! Did training finish?")
-            return
-    else:
-        env = VecNormalize.load("robust_vec_normalise.pkl", env)
-        print("✅ Normalization stats loaded.")
-    
-    # Turn OFF training and reward updating
+    env = DummyVecEnv([lambda: raw_env])
+    env = VecNormalize.load(normalize_path, env)
     env.training = False
     env.norm_reward = False
-    
-    # 4. Load Model
-    model_path = "robust_traffic_agent"
-    if not os.path.exists(model_path + ".zip"):
-        print(f"⚠️ '{model_path}.zip' not found. Checking models folder...")
-        if os.path.exists("models_robust"):
-            files = [f for f in os.listdir("models_robust") if f.endswith(".zip")]
-            if files:
-                optimized = [f for f in files if "robust" in f]
-                if optimized:
-                    latest = max(optimized, key=lambda x: int(x.split('_')[-2].split('.')[0]) if '_' in x else 0)
-                else:
-                    latest = max(files, key=lambda x: int(x.split('_')[-2].split('.')[0]) if '_' in x else 0)
-                model_path = os.path.join("models_robust", latest.replace(".zip", ""))
-                print(f"🔄 Found checkpoint: {model_path}")
-            else:
-                print("❌ No models found! Did training finish?")
-                return
+    model = PPO.load(model_path, device="cpu")
 
-    model = PPO.load(model_path)
-    print(f"✅ Robust Model Loaded from: {model_path}")
-
-    # 5. Reset and Run
-    obs = env.reset()
-    done = False
-    ambulance_start = 0
-    ambulance_end = 0
-    ambulance_duration = 0
-    step = 0
-    vehicle_waiting_times = {}  
-    
-    print("🚦 Starting Universal Evaluation Run (Random Traffic)...")
-    
+    results: list[dict] = []
     try:
-        traci.gui.setSchema("View #0", "real world")
-    except:
-        pass
-    
-    while not done:
-        # 🚨 deterministic=True works safely again because the AI is no longer blind! 🚨
-        action, _ = model.predict(obs, deterministic=True)
-        obs, reward, done, info = env.step(action)
-        
-        # Break instantly if episode times out
-        if done:
-            print("\n⚠️ Simulation reached max steps (1000s) before ambulance finished!")
-            break
-        
-        time.sleep(0.05)
-        step += 1
-        
-        # Track Ambulance
-        try:
-            current_time = traci.simulation.getTime()
-            veh_list = traci.vehicle.getIDList()
-            
-            if step % 20 == 0:
-                print(f"   [Debug] Time: {current_time}s | Vehicles on road: {len(veh_list)}")
-            
-            for veh_id in veh_list:
-                if veh_id != "hero_ambulance":
-                    waiting = traci.vehicle.getAccumulatedWaitingTime(veh_id)
-                    if veh_id not in vehicle_waiting_times or waiting > vehicle_waiting_times[veh_id]:
-                        vehicle_waiting_times[veh_id] = waiting
+        for episode in range(episodes):
+            episode_seed = seed + episode
+            env.seed(episode_seed)
+            observation = env.reset()
+            done = False
+            final_info: dict = {}
+            max_wait_by_vehicle: dict[str, float] = {}
 
-            if "hero_ambulance" in veh_list:
-                if ambulance_start == 0:
-                    ambulance_start = current_time
-                    print(f"🚑 Ambulance entered at: {ambulance_start}")
-            
-            if ambulance_start > 0 and "hero_ambulance" not in veh_list and ambulance_end == 0:
-                ambulance_end = current_time
-                ambulance_duration = ambulance_end - ambulance_start
-                print(f"🏁 Universal Agent Finished! Total Time: {ambulance_duration} seconds")
-                break
+            print(f"Episode {episode + 1}/{episodes}, SUMO seed {episode_seed}")
+            while not done:
+                action, _ = model.predict(observation, deterministic=True)
+                observation, _, dones, infos = env.step(action)
+                done = bool(dones[0])
+                final_info = infos[0]
 
-        except Exception as e:
-            print(f"❌ Error: {e}")
-            break
+                if raw_env.sumo is not None:
+                    for vehicle_id in raw_env.sumo.vehicle.getIDList():
+                        if vehicle_id != "hero_ambulance":
+                            waiting = raw_env.sumo.vehicle.getAccumulatedWaitingTime(vehicle_id)
+                            max_wait_by_vehicle[vehicle_id] = max(
+                                waiting, max_wait_by_vehicle.get(vehicle_id, 0.0)
+                            )
+                if use_gui and delay > 0:
+                    time.sleep(delay)
 
-    env.close()
-    print("✅ Evaluation Complete.")
-    
-    if ambulance_start > 0 and ambulance_end == 0:
-        ambulance_duration = 999.9  
-        print(f"❌ Ambulance failed to complete route. Recorded as {ambulance_duration}s")
-    
-    if vehicle_waiting_times:
-        civilian_avg_wait = sum(vehicle_waiting_times.values()) / len(vehicle_waiting_times)
-    else:
-        civilian_avg_wait = 0
-    
-    with open("optimized_result.txt", "w") as f:
-        f.write(f"{ambulance_duration}\n")
-        f.write(f"{civilian_avg_wait}\n")
-        
-    print(f"📊 Robust ambulance time: {ambulance_duration}s")
-    print(f"📊 Robust civilian avg waiting time: {civilian_avg_wait:.2f}s")
-    
-    return ambulance_duration, civilian_avg_wait
+            duration = final_info.get("ambulance_duration")
+            result = {
+                "episode": episode + 1,
+                "seed": episode_seed,
+                "success": bool(final_info.get("ambulance_completed")),
+                "ambulance_duration_seconds": duration,
+                "civilian_average_wait_seconds": (
+                    sum(max_wait_by_vehicle.values()) / len(max_wait_by_vehicle)
+                    if max_wait_by_vehicle
+                    else 0.0
+                ),
+                "priority_overrides": final_info.get("priority_overrides", 0),
+                "simulation_finish_time": final_info.get("ambulance_finish_time"),
+            }
+            results.append(result)
+            status = "PASS" if result["success"] else "FAIL"
+            print(
+                f"{status}: ambulance={duration}s, "
+                f"civilian average wait={result['civilian_average_wait_seconds']:.2f}s"
+            )
+    finally:
+        env.close()
+
+    RESULT_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = RESULT_DIR / "optimized_evaluation.json"
+    output_path.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
+    print(f"Results saved to {output_path}")
+    return results
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--episodes", type=int, default=1)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--headless", action="store_true")
+    parser.add_argument("--delay", type=float, default=0.03)
+    return parser.parse_args()
+
 
 if __name__ == "__main__":
-    test_optimized()
+    args = parse_args()
+    evaluation = evaluate(
+        episodes=args.episodes,
+        seed=args.seed,
+        use_gui=not args.headless,
+        delay=args.delay,
+    )
+    if not all(result["success"] for result in evaluation):
+        raise SystemExit(1)

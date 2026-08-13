@@ -4,7 +4,10 @@
 
 ## 📋 Overview
 
-This project implements an AI-powered traffic signal control system designed to prioritize emergency vehicles (ambulances) while maintaining efficient overall traffic flow. Using Proximal Policy Optimization (PPO) and SUMO (Simulation of Urban MObility), the system learns optimal signal timing policies that significantly reduce emergency vehicle response times.
+This project implements an emergency-priority traffic signal controller for a
+two-intersection SUMO network. A PPO policy controls both J4 and J6, while a
+deterministic safety layer guarantees the required signal phases as the
+ambulance approaches each junction.
 
 ## 🎯 Problem Statement
 
@@ -20,20 +23,24 @@ Our RL-based solution dynamically adjusts traffic signals to clear paths for amb
 - **RL Framework**: Stable-Baselines3 (PPO)
 - **Traffic Simulator**: SUMO 1.25.0
 - **Environment Wrapper**: sumo-rl
-- **Python**: 3.12
+- **Python**: 3.12 or newer
 - **Key Libraries**: Gymnasium, PyTorch, NumPy
 
 ## 📁 Project Structure
 
 ```
 rl-traffic-control/
-├── train_optimized.py          # Optimized training script with VecNormalize
-├── test_optimized.py            # Evaluation script with GUI visualization
+├── traffic_control_env.py      # Joint J4/J6 Gymnasium environment
+├── train_optimized.py          # Train the validated joint PPO controller
+├── test_optimized.py           # GUI/headless seeded evaluation
+├── models/optimized/           # Validated model and normalization statistics
+├── results/evaluation/         # Reproducible acceptance-test results
 ├── train2.py                    # Basic training script
 ├── test2.py                     # Basic testing script
 ├── run_baseline_pure_traci.py  # Baseline fixed-time signals comparison
 ├── data/training_logs/         # Generated per-episode SUMO CSV metrics
-│   ├── robust/                 # Robust/optimized training logs
+│   ├── optimized/              # Current joint-controller training logs
+│   ├── robust/                 # Legacy robust training logs
 │   └── scenario_s/             # S-scenario training logs
 ├── draft02.net.xml              # SUMO road network
 ├── draft02.rou.xml              # Civilian vehicle routes
@@ -56,15 +63,32 @@ export SUMO_HOME="/usr/share/sumo"  # Adjust path as needed
 
 ### Running the Project
 
-**1. Train the Optimized RL Agent**
-```bash
-python3 train_optimized.py
-```
-- Training runs for 200,000 timesteps
-- Final model: `robust_traffic_agent.zip`
-- Normalization stats: `robust_vec_normalise.pkl`
+**1. Use the included validated model**
 
-**2. Run Baseline Comparison**
+Run one episode in the SUMO GUI:
+
+```bash
+python3 test_optimized.py
+```
+
+Run the reproducible 20-seed acceptance test without a GUI:
+
+```bash
+python3 test_optimized.py --headless --episodes 20 --seed 0 --delay 0
+```
+
+The command exits with status 1 if any ambulance fails to finish.
+
+**2. Retrain the controller**
+
+```bash
+python3 train_optimized.py --timesteps 100000
+```
+- Checkpoints are written every 10,000 steps and ignored by Git.
+- Final model: `models/optimized/joint_traffic_agent.zip`
+- Normalization stats: `models/optimized/vec_normalize.pkl`
+
+**3. Run the legacy fixed-time baseline GUI**
 ```bash
 python3 run_baseline_pure_traci.py
 ```
@@ -72,15 +96,7 @@ python3 run_baseline_pure_traci.py
 - Records ambulance travel time for comparison
 - Visualizes simulation in SUMO GUI
 
-**3. Test the Trained Agent**
-```bash
-python3 test_optimized.py
-```
-- Loads trained model and normalization stats
-- Visualizes agent performance with SUMO GUI
-- Tracks and reports ambulance travel time
-
-**4. Plot the Training Metrics**
+**4. Plot legacy robust-training metrics**
 ```bash
 python3 plot_res.py
 ```
@@ -89,13 +105,19 @@ python3 plot_res.py
 
 ## 🧠 Key Features
 
-### Custom Reward Function
-```python
-reward = -1 * ((civilian_penalty × 0.1) + (ambulance_penalty × 5000))
-```
-- **Civilian Penalty**: Sum of accumulated waiting time across all lanes
-- **Ambulance Penalty**: Massive penalty (5000) when ambulance speed < 1 m/s
-- **Weighted Design**: Ambulance priority 50× more important than civilian flow
+### Joint control and safety
+
+- PPO emits one action for J4 and one for J6 through a `MultiDiscrete([2, 2])`
+  action space.
+- Observations combine both SUMO-RL signal observations with ambulance
+  presence, speed, progress, and route-location features.
+- The environment uses SUMO-RL's labeled TraCI connection. This is required
+  when reading the ambulance state.
+- During emergency approach, a safety shield selects J4 phase 0 and J6 phase 1
+  for the ambulance's two left turns. PPO controls normal traffic outside that
+  safety-critical window.
+- Reward combines civilian queues/waiting time, ambulance progress, stopped
+  penalties, and a completion bonus.
 
 ### Optimization Techniques
 
@@ -108,11 +130,11 @@ reward = -1 * ((civilian_penalty × 0.1) + (ambulance_penalty × 5000))
    - n_steps: 2048 (experience collection)
    - GAE Lambda: 0.95 (variance smoothing)
 
-### Environment Configuration
+### Environment configuration
 - **Simulation Time**: 1000 seconds per episode
-- **Ambulance Spawn**: 120 seconds into simulation
+- **Ambulance Requested Departure**: 5 seconds (actual insertion can be delayed)
 - **Signal Constraints**: 5-60 seconds green time, 4 seconds yellow
-- **Control Mode**: Single-agent (centralized control)
+- **Control Mode**: Centralized joint control of J4 and J6
 
 ## 📊 Performance Metrics
 
@@ -122,37 +144,35 @@ The system tracks:
 - **Episode Reward Mean**: Normalized reward (should converge to stable value)
 - **Explained Variance**: How well the value function predicts returns
 
-### Achieved Results
-- **Baseline (Fixed-time)**: ~17 seconds ambulance travel time
-- **RL Agent (Optimized)**: ~5 seconds ambulance travel time
-- **Improvement**: 70% reduction in emergency response time
-- **Impact**: The RL agent successfully prioritizes ambulance passage with minimal civilian traffic disruption
+### Verified results
+
+The current model was trained for 20,480 PPO timesteps and evaluated on SUMO
+seeds 0–19. Full per-seed output is stored in
+`results/evaluation/optimized_evaluation.json`.
+
+| Controller | Success | Mean | Minimum | Maximum |
+| --- | ---: | ---: | ---: | ---: |
+| Joint PPO + emergency shield | 20/20 | 15.00s | 5s | 30s |
+| Fixed-time benchmark | 20/20 | 15.25s | 5s | 35s |
+| Previous single-light PPO | 0/1 | timeout | — | 999.9s |
+
+The 20-seed comparison is a regression/acceptance test, not a claim of
+real-world statistical superiority. See `VALIDATION.md` for methodology and
+the diagnosed failure in the previous controller.
 
 ## 🔧 Configuration
 
 ### Training Parameters
 
-Edit `train_optimized.py`:
+Command-line training parameter:
 ```python
-total_timesteps=100000      # Training duration
-num_seconds=1000            # Episode length
-learning_rate=3e-4          # Learning rate
-checkpoint_freq=10000       # Save frequency
-```
-
-### Reward Tuning
-
-Adjust weights in `custom_ambulance_reward()`:
-```python
-civilian_penalty * 0.1      # Civilian weight (default: 0.1)
-ambulance_penalty = 5000    # Ambulance penalty (default: 5000)
+python3 train_optimized.py --timesteps 100000
 ```
 
 ## 📈 Monitoring Training
 
 During training, watch for:
-- `ep_rew_mean`: Should stabilize (not remain at -228k)
-- `explained_variance`: Should increase from ~0 to 0.3-0.5
+- `explained_variance`: The validated 20,480-step run finished at 0.701
 - `entropy_loss`: Should gradually decrease (exploration → exploitation)
 - `policy_gradient_loss`: Should remain stable, not explode
 
@@ -179,7 +199,7 @@ torch
 ## 🤝 Contributing
 
 This is an academic/research project. Key areas for improvement:
-- Multi-agent scenarios (multiple intersections)
+- Larger road networks and multiple emergency vehicles
 - Real-world traffic pattern integration
 - Transfer learning from simulation to reality
 - Additional emergency vehicle types
