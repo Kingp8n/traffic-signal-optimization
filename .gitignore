@@ -5,4 +5,7 @@ __pycache__/
 data/training_logs/**/*.csv
 data/evaluation_logs/**/*.csv
 
+# Intermediate training checkpoints; keep only the final validated model.
+models/optimized/checkpoints/
+
 .venv/
